@@ -11,7 +11,7 @@ import { fetchWorkspaceMemberIdsWithInboxRecaps } from 'src/logic-functions/data
 import { findCallRecordingForInbox } from 'src/logic-functions/data/find-call-recording-for-inbox.util';
 import { isInboxEnabled } from 'src/logic-functions/data/is-inbox-enabled.util';
 import { sendInboxMessageToEachMember } from 'src/logic-functions/data/send-inbox-message-to-each-member.util';
-import { extractCallRecordingSummaryGist } from 'src/logic-functions/domain/extract-call-recording-summary-gist.util';
+import { buildCallRecordingRecapMessage } from 'src/logic-functions/domain/build-call-recording-recap-message.util';
 import { isCallRecordingCreatedByCallRecorder } from 'src/logic-functions/domain/is-call-recording-created-by-call-recorder.util';
 import { isCallRecordingSummaryAvailable } from 'src/logic-functions/domain/is-call-recording-summary-available.util';
 import { fetchWithRateLimitRetry } from 'src/logic-functions/utils/fetch-with-rate-limit-retry.util';
@@ -35,14 +35,6 @@ type PostCallRecordingToInboxResult =
 
 const buildRecordingReadyMessageKey = (workspaceMemberId: string): string =>
   `call-recording-ready-${workspaceMemberId}`;
-
-const buildRecapMessageKey = ({
-  callRecordingId,
-  workspaceMemberId,
-}: {
-  callRecordingId: string;
-  workspaceMemberId: string;
-}): string => `call-recording-recap-${callRecordingId}-${workspaceMemberId}`;
 
 export const postCallRecordingToInbox = async ({
   client,
@@ -101,26 +93,18 @@ export const postCallRecordingToInbox = async ({
   const hasInboxRecaps = (workspaceMemberId: string): boolean =>
     workspaceMemberIdsWithInboxRecaps.has(workspaceMemberId);
   const recapWorkspaceMemberIds = workspaceMemberIds.filter(hasInboxRecaps);
-  const gist = extractCallRecordingSummaryGist(summaryMarkdown);
-
-  // Logic functions have no translation helper yet.
   const recapResult = await sendInboxMessageToEachMember({
     workspaceMemberIds: recapWorkspaceMemberIds,
-    buildMessage: (workspaceMemberId) => ({
-      threadKey: buildRecapMessageKey({
+    buildMessage: (workspaceMemberId) =>
+      buildCallRecordingRecapMessage({
         callRecordingId: callRecording.id,
         workspaceMemberId,
+        callRecordingReference,
+        calendarEventTitle: callRecording.calendarEventTitle,
+        summaryMarkdown,
       }),
-      idempotencyKey: buildRecapMessageKey({
-        callRecordingId: callRecording.id,
-        workspaceMemberId,
-      }),
-      title: callRecording.calendarEventTitle ?? 'Call recap',
-      text: isUndefined(gist)
-        ? `Your call was recorded: ${callRecordingReference}.`
-        : `${gist}\n\n${callRecordingReference}`,
-    }),
   });
+  // Logic functions have no translation helper yet.
   const recordingReadyResult = await sendInboxMessageToEachMember({
     workspaceMemberIds: workspaceMemberIds.filter(
       (workspaceMemberId) => !hasInboxRecaps(workspaceMemberId),
