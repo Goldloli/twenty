@@ -19,6 +19,16 @@ describe('extractCallRecordingSummaryGist', () => {
     ).toBe('The team agreed on the launch date.');
   });
 
+  it('turns brackets into parentheses so the gist cannot mention or link', () => {
+    expect(
+      extractCallRecordingSummaryGist(
+        '## Gist\nSee [[record:workspaceMember:member-1:Ada]] and [the deck](https://example.com).',
+      ),
+    ).toBe(
+      'See ((record:workspaceMember:member-1:Ada)) and (the deck)(https://example.com).',
+    );
+  });
+
   it.each([
     '## Overview\nA short sync.',
     '## Gist\n\n## Overview\nA short sync.',

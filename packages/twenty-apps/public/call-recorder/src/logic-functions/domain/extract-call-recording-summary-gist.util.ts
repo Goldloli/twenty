@@ -1,3 +1,4 @@
+import { sanitizeInboxMessageText } from 'src/logic-functions/domain/sanitize-inbox-message-text.util';
 import { isNonEmptyString } from 'src/logic-functions/utils/is-non-empty-string.util';
 
 const GIST_HEADING = '## gist';
@@ -26,5 +27,5 @@ export const extractCallRecordingSummaryGist = (
     .filter(isNonEmptyString)
     .join(' ');
 
-  return isNonEmptyString(gist) ? gist : undefined;
+  return isNonEmptyString(gist) ? sanitizeInboxMessageText(gist) : undefined;
 };

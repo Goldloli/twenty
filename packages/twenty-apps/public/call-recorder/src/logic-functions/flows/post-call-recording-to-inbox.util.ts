@@ -3,16 +3,17 @@ import { type CoreApiClient } from 'twenty-client-sdk/core';
 import {
   inboxReferenceRecord,
   RetryableLogicFunctionError,
-  sendInboxMessage,
 } from 'twenty-sdk/logic-function';
 
 import { fetchWorkspaceMemberIdsForCalendarEvent } from 'src/logic-functions/data/fetch-workspace-member-ids-for-calendar-event.util';
+import { fetchWorkspaceMemberIdsWithInboxRecaps } from 'src/logic-functions/data/fetch-workspace-member-ids-with-inbox-recaps.util';
 import { findCallRecordingForInbox } from 'src/logic-functions/data/find-call-recording-for-inbox.util';
 import { isInboxEnabled } from 'src/logic-functions/data/is-inbox-enabled.util';
+import { sendInboxMessageToEachMember } from 'src/logic-functions/data/send-inbox-message-to-each-member.util';
+import { extractCallRecordingSummaryGist } from 'src/logic-functions/domain/extract-call-recording-summary-gist.util';
 import { isCallRecordingCreatedByCallRecorder } from 'src/logic-functions/domain/is-call-recording-created-by-call-recorder.util';
 import { isCallRecordingSummaryAvailable } from 'src/logic-functions/domain/is-call-recording-summary-available.util';
 import { isNonEmptyString } from 'src/logic-functions/utils/is-non-empty-string.util';
-import { isNotFoundError } from 'src/logic-functions/utils/is-not-found-error.util';
 
 type PostCallRecordingToInboxResult =
   | {
@@ -26,11 +27,20 @@ type PostCallRecordingToInboxResult =
   | {
       outcome: 'sent';
       workspaceMemberCount: number;
+      recapWorkspaceMemberCount: number;
       skippedWorkspaceMemberCount: number;
     };
 
 const buildRecordingReadyMessageKey = (workspaceMemberId: string): string =>
   `call-recording-ready-${workspaceMemberId}`;
+
+const buildRecapMessageKey = ({
+  callRecordingId,
+  workspaceMemberId,
+}: {
+  callRecordingId: string;
+  workspaceMemberId: string;
+}): string => `call-recording-recap-${callRecordingId}-${workspaceMemberId}`;
 
 export const postCallRecordingToInbox = async ({
   client,
@@ -56,7 +66,12 @@ export const postCallRecordingToInbox = async ({
     return { outcome: 'not-app-recording' };
   }
 
-  if (!isCallRecordingSummaryAvailable(callRecording.summaryMarkdown)) {
+  const { summaryMarkdown } = callRecording;
+
+  if (
+    isUndefined(summaryMarkdown) ||
+    !isCallRecordingSummaryAvailable(summaryMarkdown)
+  ) {
     return { outcome: 'no-summary' };
   }
 
@@ -75,31 +90,46 @@ export const postCallRecordingToInbox = async ({
     objectNameSingular: 'callRecording',
     recordId: callRecording.id,
   });
-  const skippedWorkspaceMemberIds: string[] = [];
-  const failedSends: { workspaceMemberId: string; error: unknown }[] = [];
+  const workspaceMemberIdsWithInboxRecaps =
+    await fetchWorkspaceMemberIdsWithInboxRecaps();
+  const hasInboxRecaps = (workspaceMemberId: string): boolean =>
+    workspaceMemberIdsWithInboxRecaps.has(workspaceMemberId);
+  const recapWorkspaceMemberIds = workspaceMemberIds.filter(hasInboxRecaps);
+  const gist = extractCallRecordingSummaryGist(summaryMarkdown);
 
-  for (const workspaceMemberId of workspaceMemberIds) {
-    const messageKey = buildRecordingReadyMessageKey(workspaceMemberId);
-
-    try {
-      // Logic functions have no translation helper yet.
-      await sendInboxMessage({
-        workspaceMemberIds: [workspaceMemberId],
-        threadKey: messageKey,
-        idempotencyKey: messageKey,
-        title: 'Your call recording is ready',
-        text: `Your call was recorded: ${callRecordingReference}. Open it to read the summary and the transcript.`,
-      });
-    } catch (error) {
-      // The server answers NOT_FOUND for a member who cannot have the conversation (no AI access).
-      if (isNotFoundError(error)) {
-        skippedWorkspaceMemberIds.push(workspaceMemberId);
-        continue;
-      }
-
-      failedSends.push({ workspaceMemberId, error });
-    }
-  }
+  // Logic functions have no translation helper yet.
+  const recapResult = await sendInboxMessageToEachMember({
+    workspaceMemberIds: recapWorkspaceMemberIds,
+    buildMessage: (workspaceMemberId) => ({
+      threadKey: buildRecapMessageKey({
+        callRecordingId: callRecording.id,
+        workspaceMemberId,
+      }),
+      idempotencyKey: buildRecapMessageKey({
+        callRecordingId: callRecording.id,
+        workspaceMemberId,
+      }),
+      title: callRecording.calendarEventTitle ?? 'Call recap',
+      text: isUndefined(gist)
+        ? `Your call was recorded: ${callRecordingReference}.`
+        : `${gist}\n\n${callRecordingReference}`,
+    }),
+  });
+  const recordingReadyResult = await sendInboxMessageToEachMember({
+    workspaceMemberIds: workspaceMemberIds.filter(
+      (workspaceMemberId) => !hasInboxRecaps(workspaceMemberId),
+    ),
+    buildMessage: (workspaceMemberId) => ({
+      threadKey: buildRecordingReadyMessageKey(workspaceMemberId),
+      idempotencyKey: buildRecordingReadyMessageKey(workspaceMemberId),
+      title: 'Your call recording is ready',
+      text: `Your call was recorded: ${callRecordingReference}. Open it to read the summary and the transcript.`,
+    }),
+  });
+  const failedSends = [
+    ...recapResult.failedSends,
+    ...recordingReadyResult.failedSends,
+  ];
 
   if (isNonEmptyArray(failedSends)) {
     const [{ workspaceMemberId, error }] = failedSends;
@@ -114,6 +144,9 @@ export const postCallRecordingToInbox = async ({
   return {
     outcome: 'sent',
     workspaceMemberCount: workspaceMemberIds.length,
-    skippedWorkspaceMemberCount: skippedWorkspaceMemberIds.length,
+    recapWorkspaceMemberCount: recapWorkspaceMemberIds.length,
+    skippedWorkspaceMemberCount:
+      recapResult.skippedWorkspaceMemberIds.length +
+      recordingReadyResult.skippedWorkspaceMemberIds.length,
   };
 };
