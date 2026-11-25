@@ -14,10 +14,13 @@ import { type FlatWorkspace } from 'src/engine/core-modules/workspace/types/flat
 import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
+import { CreateAppVisitorEventTokenInput } from 'src/engine/metadata-modules/event-metadata/dtos/create-app-visitor-event-token.input';
+import { CreateAppVisitorEventTokenOutput } from 'src/engine/metadata-modules/event-metadata/dtos/create-app-visitor-event-token.output';
 import { EmitAppEventInput } from 'src/engine/metadata-modules/event-metadata/dtos/emit-app-event.input';
 import { EmitAppEventOutput } from 'src/engine/metadata-modules/event-metadata/dtos/emit-app-event.output';
 import { EventMetadataGraphqlApiExceptionInterceptor } from 'src/engine/metadata-modules/event-metadata/interceptors/event-metadata-graphql-api-exception.interceptor';
 import { ApplicationEventEmitterService } from 'src/engine/metadata-modules/event-metadata/services/application-event-emitter.service';
+import { VisitorEventTokenService } from 'src/engine/metadata-modules/event-metadata/services/visitor-event-token.service';
 
 @UseGuards(
   AccessPolicyGuard({
@@ -37,6 +40,7 @@ import { ApplicationEventEmitterService } from 'src/engine/metadata-modules/even
 export class ApplicationEventsResolver {
   constructor(
     private readonly applicationEventEmitterService: ApplicationEventEmitterService,
+    private readonly visitorEventTokenService: VisitorEventTokenService,
   ) {}
 
   @Mutation(() => EmitAppEventOutput)
@@ -50,6 +54,22 @@ export class ApplicationEventsResolver {
       applicationId: application.id,
       event: input.event,
       properties: input.properties ?? {},
+      anonymousId: input.anonymousId ?? null,
+    });
+  }
+
+  @Mutation(() => CreateAppVisitorEventTokenOutput)
+  async createAppVisitorEventToken(
+    @AuthApplication() application: FlatApplication,
+    @AuthWorkspace() workspace: FlatWorkspace,
+    @Args('input') input: CreateAppVisitorEventTokenInput,
+  ): Promise<CreateAppVisitorEventTokenOutput> {
+    return this.visitorEventTokenService.create({
+      workspaceId: workspace.id,
+      applicationId: application.id,
+      anonymousId: input.anonymousId,
+      events: input.events,
+      expiresInSeconds: input.expiresInSeconds,
     });
   }
 }

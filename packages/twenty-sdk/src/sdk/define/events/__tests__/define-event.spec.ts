@@ -15,6 +15,14 @@ const baseValidConfig = {
     },
     { name: 'text', type: 'TEXT' as const },
   ],
+  capabilities: {
+    realtime: {
+      scopes: [
+        { kind: 'record' as const, property: 'conversationId' },
+        { kind: 'visitor' as const },
+      ],
+    },
+  },
 };
 
 describe('defineEvent', () => {
@@ -34,13 +42,12 @@ describe('defineEvent', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects a property declared twice', () => {
+  it('rejects a record scope on an undeclared property', () => {
     const result = defineEvent({
       ...baseValidConfig,
-      properties: [
-        { name: 'text', type: 'TEXT' },
-        { name: 'text', type: 'NUMBER' },
-      ],
+      capabilities: {
+        realtime: { scopes: [{ kind: 'record', property: 'threadId' }] },
+      },
     });
 
     expect(result.success).toBe(false);

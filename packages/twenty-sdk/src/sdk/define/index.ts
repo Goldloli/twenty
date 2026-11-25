@@ -165,6 +165,7 @@ export type {
   EventManifest,
   EventPropertyManifest,
   EventPropertyType,
+  EventRealtimeScopeManifest,
 } from 'twenty-shared/application';
 
 export { defineNavigationMenuItem } from '@/sdk/define/navigation-menu-items/define-navigation-menu-item';

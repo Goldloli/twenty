@@ -4,7 +4,7 @@ const CONVERSATION_OBJECT_UNIVERSAL_IDENTIFIER =
   'a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d';
 
 describe('getEventDefinitionErrors', () => {
-  it('should accept a record reference property pointing at an object', () => {
+  it('should accept a record scope pointing at a record reference property', () => {
     expect(
       getEventDefinitionErrors({
         name: 'messageAdded',
@@ -17,6 +17,14 @@ describe('getEventDefinitionErrors', () => {
           },
           { name: 'text', type: 'TEXT' },
         ],
+        capabilities: {
+          realtime: {
+            scopes: [
+              { kind: 'record', property: 'conversationId' },
+              { kind: 'visitor' },
+            ],
+          },
+        },
       }),
     ).toEqual([]);
   });
@@ -52,5 +60,33 @@ describe('getEventDefinitionErrors', () => {
         ],
       }),
     ).toHaveLength(1);
+  });
+
+  it('should reject a record scope on a property that is not a record reference', () => {
+    expect(
+      getEventDefinitionErrors({
+        name: 'messageAdded',
+        properties: [{ name: 'conversationId', type: 'UUID' }],
+        capabilities: {
+          realtime: {
+            scopes: [{ kind: 'record', property: 'conversationId' }],
+          },
+        },
+      }),
+    ).toEqual([
+      'Event "messageAdded" record scope must name a RECORD_REFERENCE property, got "conversationId"',
+    ]);
+  });
+
+  it('should reject the same scope declared twice', () => {
+    expect(
+      getEventDefinitionErrors({
+        name: 'messageAdded',
+        properties: [],
+        capabilities: {
+          realtime: { scopes: [{ kind: 'visitor' }, { kind: 'visitor' }] },
+        },
+      }),
+    ).toEqual(['Event "messageAdded" declares realtime scope "visitor" twice']);
   });
 });

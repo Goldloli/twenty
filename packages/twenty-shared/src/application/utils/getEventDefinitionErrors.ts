@@ -1,15 +1,21 @@
 import { EVENT_LIMITS } from '@/application/constants/EventLimits';
 import { EVENT_NAME_PATTERN } from '@/application/constants/EventNamePattern';
 import { EVENT_PROPERTY_TYPES } from '@/application/constants/EventPropertyTypes';
-import { type EventPropertyManifest } from '@/application/eventManifestType';
+import { EVENT_REALTIME_SCOPE_KINDS } from '@/application/constants/EventRealtimeScopeKinds';
+import {
+  type EventCapabilitiesManifest,
+  type EventPropertyManifest,
+} from '@/application/eventManifestType';
 import { isValidUniversalIdentifier } from '@/application/utils/isValidUniversalIdentifier';
 
 export const getEventDefinitionErrors = ({
   name,
   properties,
+  capabilities,
 }: {
   name: string;
   properties: EventPropertyManifest[];
+  capabilities?: EventCapabilitiesManifest | null;
 }): string[] => {
   const errors: string[] = [];
 
@@ -60,6 +66,43 @@ export const getEventDefinitionErrors = ({
     ) {
       errors.push(
         `Event "${name}" property "${property.name}" must set objectUniversalIdentifier to the universalIdentifier of an object`,
+      );
+    }
+  }
+
+  const scopes = capabilities?.realtime?.scopes ?? [];
+  const scopeKeys = new Set<string>();
+
+  for (const scope of scopes) {
+    if (!EVENT_REALTIME_SCOPE_KINDS.includes(scope.kind)) {
+      errors.push(
+        `Event "${name}" realtime scope kind must be one of: ${EVENT_REALTIME_SCOPE_KINDS.join(', ')}`,
+      );
+      continue;
+    }
+
+    const scopeKey =
+      scope.kind === 'record' ? `record:${scope.property}` : scope.kind;
+
+    if (scopeKeys.has(scopeKey)) {
+      errors.push(
+        `Event "${name}" declares realtime scope "${scopeKey}" twice`,
+      );
+    }
+
+    scopeKeys.add(scopeKey);
+
+    if (scope.kind !== 'record') {
+      continue;
+    }
+
+    const referencedProperty = properties.find(
+      (property) => property.name === scope.property,
+    );
+
+    if (referencedProperty?.type !== 'RECORD_REFERENCE') {
+      errors.push(
+        `Event "${name}" record scope must name a RECORD_REFERENCE property, got "${scope.property}"`,
       );
     }
   }

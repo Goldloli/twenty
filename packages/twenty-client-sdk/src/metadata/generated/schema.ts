@@ -401,6 +401,19 @@ export interface AppConnection {
     __typename: 'AppConnection'
 }
 
+export interface AppEventOccurrence {
+    id: Scalars['UUID']
+    occurredAt: Scalars['String']
+    properties: Scalars['JSON']
+    type: Scalars['String']
+    __typename: 'AppEventOccurrence'
+}
+
+export interface AppEventStreamPayload {
+    occurrence?: AppEventOccurrence
+    __typename: 'AppEventStreamPayload'
+}
+
 export interface AppKeyValue {
     key: Scalars['String']
     scope: AppKeyValueScope
@@ -1447,6 +1460,12 @@ export interface ConnectedImapSmtpCaldavAccount {
 }
 
 export type ConnectionProviderScope = 'USER' | 'WORKSPACE'
+
+export interface CreateAppVisitorEventTokenOutput {
+    expiresAt: Scalars['String']
+    token: Scalars['String']
+    __typename: 'CreateAppVisitorEventTokenOutput'
+}
 
 export interface CreateApplicationFileUploadsResult {
     errors: ApplicationFileUploadError[]
@@ -2511,6 +2530,7 @@ export interface Mutation {
     createAgentChatChannel: AgentChatChannel
     createApiKey: ApiKey
     createAppMessageChannel: MessageChannel
+    createAppVisitorEventToken: CreateAppVisitorEventTokenOutput
     createApplicationFileUploads: CreateApplicationFileUploadsResult
     createApplicationRegistration: CreateApplicationRegistration
     createApprovedAccessDomain: ApprovedAccessDomain
@@ -3843,6 +3863,7 @@ export interface Subscription {
     exportRecords: RecordExport
     logicFunctionLogs: LogicFunctionLogs
     onAgentChatEvent: AgentChatEvent
+    onAppEvent: AppEventStreamPayload
     onEventSubscription?: EventSubscription
     __typename: 'Subscription'
 }
@@ -5079,6 +5100,23 @@ export interface AppConnectionGenqlSelection{
     __scalar?: boolean | number
 }
 
+export interface AppEventOccurrenceGenqlSelection{
+    id?: boolean | number
+    occurredAt?: boolean | number
+    properties?: boolean | number
+    type?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface AppEventStreamPayloadGenqlSelection{
+    occurrence?: AppEventOccurrenceGenqlSelection
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface AppEventSubscriptionInput {event: Scalars['String'],property?: (Scalars['String'] | null),recordId: Scalars['UUID']}
+
 export interface AppKeyValueGenqlSelection{
     key?: boolean | number
     scope?: boolean | number
@@ -6185,6 +6223,15 @@ export interface CreateApiKeyInput {expiresAt: Scalars['String'],name: Scalars['
 
 export interface CreateAppMessageChannelInput {connectedAccountId: Scalars['UUID'],displayName?: (Scalars['String'] | null),handle: Scalars['String'],messagingProviderUniversalIdentifier?: (Scalars['UUID'] | null),participantHandleFieldUniversalIdentifier?: (Scalars['UUID'] | null),visibility: MessageChannelVisibility}
 
+export interface CreateAppVisitorEventTokenInput {anonymousId: Scalars['String'],events: Scalars['String'][],expiresInSeconds?: (Scalars['Int'] | null)}
+
+export interface CreateAppVisitorEventTokenOutputGenqlSelection{
+    expiresAt?: boolean | number
+    token?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
 export interface CreateApplicationFileUploadsResultGenqlSelection{
     errors?: ApplicationFileUploadErrorGenqlSelection
     targets?: ApplicationFileUploadTargetGenqlSelection
@@ -6491,7 +6538,7 @@ export interface EmailsConfigurationGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface EmitAppEventInput {event: Scalars['String'],properties?: (Scalars['JSON'] | null)}
+export interface EmitAppEventInput {anonymousId?: (Scalars['String'] | null),event: Scalars['String'],properties?: (Scalars['JSON'] | null)}
 
 export interface EmitAppEventOutputGenqlSelection{
     id?: boolean | number
@@ -7481,6 +7528,7 @@ export interface MutationGenqlSelection{
     createAgentChatChannel?: (AgentChatChannelGenqlSelection & { __args: {input: CreateAgentChatChannelInput} })
     createApiKey?: (ApiKeyGenqlSelection & { __args: {input: CreateApiKeyInput} })
     createAppMessageChannel?: (MessageChannelGenqlSelection & { __args: {input: CreateAppMessageChannelInput} })
+    createAppVisitorEventToken?: (CreateAppVisitorEventTokenOutputGenqlSelection & { __args: {input: CreateAppVisitorEventTokenInput} })
     createApplicationFileUploads?: (CreateApplicationFileUploadsResultGenqlSelection & { __args: {applicationUniversalIdentifier: Scalars['String'], files: ApplicationFileUploadRequestInput[]} })
     createApplicationRegistration?: (CreateApplicationRegistrationGenqlSelection & { __args: {input: CreateApplicationRegistrationInput} })
     createApprovedAccessDomain?: (ApprovedAccessDomainGenqlSelection & { __args: {input: CreateApprovedAccessDomainInput} })
@@ -7979,6 +8027,8 @@ export interface ObjectRecordsPermissionsGenqlSelection{
     __typename?: boolean | number
     __scalar?: boolean | number
 }
+
+export interface OnAppEventInput {subscriptions: AppEventSubscriptionInput[]}
 
 export interface OnboardingStepNavigationGenqlSelection{
     /** Onboarding status the user landed on */
@@ -8943,6 +8993,7 @@ export interface SubscriptionGenqlSelection{
     exportRecords?: (RecordExportGenqlSelection & { __args: {input: CreateRecordExportInput} })
     logicFunctionLogs?: (LogicFunctionLogsGenqlSelection & { __args: {input: LogicFunctionLogsInput} })
     onAgentChatEvent?: (AgentChatEventGenqlSelection & { __args?: {agentUniversalIdentifier?: (Scalars['UUID'] | null), runId?: (Scalars['UUID'] | null), threadId?: (Scalars['UUID'] | null), threadKey?: (Scalars['String'] | null)} })
+    onAppEvent?: (AppEventStreamPayloadGenqlSelection & { __args: {input: OnAppEventInput} })
     onEventSubscription?: (EventSubscriptionGenqlSelection & { __args: {eventStreamId: Scalars['String']} })
     __typename?: boolean | number
     __scalar?: boolean | number
@@ -10329,6 +10380,22 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     
 
 
+    const AppEventOccurrence_possibleTypes: string[] = ['AppEventOccurrence']
+    export const isAppEventOccurrence = (obj?: { __typename?: any } | null): obj is AppEventOccurrence => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isAppEventOccurrence"')
+      return AppEventOccurrence_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const AppEventStreamPayload_possibleTypes: string[] = ['AppEventStreamPayload']
+    export const isAppEventStreamPayload = (obj?: { __typename?: any } | null): obj is AppEventStreamPayload => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isAppEventStreamPayload"')
+      return AppEventStreamPayload_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
     const AppKeyValue_possibleTypes: string[] = ['AppKeyValue']
     export const isAppKeyValue = (obj?: { __typename?: any } | null): obj is AppKeyValue => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isAppKeyValue"')
@@ -11061,6 +11128,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     export const isConnectedImapSmtpCaldavAccount = (obj?: { __typename?: any } | null): obj is ConnectedImapSmtpCaldavAccount => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isConnectedImapSmtpCaldavAccount"')
       return ConnectedImapSmtpCaldavAccount_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const CreateAppVisitorEventTokenOutput_possibleTypes: string[] = ['CreateAppVisitorEventTokenOutput']
+    export const isCreateAppVisitorEventTokenOutput = (obj?: { __typename?: any } | null): obj is CreateAppVisitorEventTokenOutput => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isCreateAppVisitorEventTokenOutput"')
+      return CreateAppVisitorEventTokenOutput_possibleTypes.includes(obj.__typename)
     }
     
 
