@@ -1,5 +1,6 @@
 import { isNonEmptyArray, isUndefined } from '@sniptt/guards';
 import { type CoreApiClient } from 'twenty-client-sdk/core';
+import { MetadataApiClient } from 'twenty-client-sdk/metadata';
 import {
   inboxReferenceRecord,
   RetryableLogicFunctionError,
@@ -13,6 +14,7 @@ import { sendInboxMessageToEachMember } from 'src/logic-functions/data/send-inbo
 import { extractCallRecordingSummaryGist } from 'src/logic-functions/domain/extract-call-recording-summary-gist.util';
 import { isCallRecordingCreatedByCallRecorder } from 'src/logic-functions/domain/is-call-recording-created-by-call-recorder.util';
 import { isCallRecordingSummaryAvailable } from 'src/logic-functions/domain/is-call-recording-summary-available.util';
+import { fetchWithRateLimitRetry } from 'src/logic-functions/utils/fetch-with-rate-limit-retry.util';
 import { isNonEmptyString } from 'src/logic-functions/utils/is-non-empty-string.util';
 
 type PostCallRecordingToInboxResult =
@@ -49,7 +51,11 @@ export const postCallRecordingToInbox = async ({
   client: Pick<CoreApiClient, 'query'>;
   callRecordingId: string;
 }): Promise<PostCallRecordingToInboxResult> => {
-  if (!(await isInboxEnabled())) {
+  const isEnabled = await isInboxEnabled({
+    metadataClient: new MetadataApiClient({ fetch: fetchWithRateLimitRetry }),
+  });
+
+  if (!isEnabled) {
     return { outcome: 'inbox-disabled' };
   }
 
