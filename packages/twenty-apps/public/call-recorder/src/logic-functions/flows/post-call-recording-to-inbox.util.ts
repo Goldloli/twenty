@@ -2,6 +2,7 @@ import { isNonEmptyArray, isUndefined } from '@sniptt/guards';
 import { type CoreApiClient } from 'twenty-client-sdk/core';
 import {
   inboxReferenceRecord,
+  RetryableLogicFunctionError,
   sendInboxMessage,
 } from 'twenty-sdk/logic-function';
 
@@ -90,8 +91,7 @@ export const postCallRecordingToInbox = async ({
         text: `Your call was recorded: ${callRecordingReference}. Open it to read the summary and the transcript.`,
       });
     } catch (error) {
-      // The server answers NOT_FOUND for a member who cannot have the
-      // conversation, such as one without access to AI.
+      // The server answers NOT_FOUND for a member who cannot have the conversation (no AI access).
       if (isNotFoundError(error)) {
         skippedWorkspaceMemberIds.push(workspaceMemberId);
         continue;
@@ -104,7 +104,7 @@ export const postCallRecordingToInbox = async ({
   if (isNonEmptyArray(failedSends)) {
     const [{ workspaceMemberId, error }] = failedSends;
 
-    throw new Error(
+    throw new RetryableLogicFunctionError(
       `${failedSends.length} of ${workspaceMemberIds.length} inbox messages failed for call recording ${callRecording.id}, first for workspace member ${workspaceMemberId}: ${
         error instanceof Error ? error.message : String(error)
       }`,

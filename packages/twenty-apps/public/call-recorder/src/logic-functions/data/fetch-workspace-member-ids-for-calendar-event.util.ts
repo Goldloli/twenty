@@ -2,10 +2,7 @@ import { isUndefined } from '@sniptt/guards';
 import { type CoreApiClient } from 'twenty-client-sdk/core';
 
 import { TWENTY_PAGE_SIZE } from 'src/logic-functions/constants/twenty-page-size';
-import {
-  fetchAllNodes,
-  type ConnectionPage,
-} from 'src/logic-functions/data/fetch-all-nodes.util';
+import { fetchAllNodes } from 'src/logic-functions/data/fetch-all-nodes.util';
 import { getUniqueSortedIds } from 'src/logic-functions/utils/get-unique-sorted-ids.util';
 
 type CalendarEventParticipantNode = { workspaceMemberId?: string | null };
@@ -41,8 +38,7 @@ export const fetchWorkspaceMemberIdsForCalendarEvent = async ({
         },
       });
 
-      return queryResult.calendarEventParticipants as
-        ConnectionPage<CalendarEventParticipantNode> | undefined;
+      return queryResult.calendarEventParticipants;
     });
 
   return getUniqueSortedIds(

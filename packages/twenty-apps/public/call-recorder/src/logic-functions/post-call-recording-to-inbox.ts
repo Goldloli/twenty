@@ -42,8 +42,6 @@ export const postCallRecordingToInboxHandler = async (
 
   const summaryDiff = event.properties.diff?.summary;
 
-  // Edits and regenerations of a summary that was already there are skipped
-  // before any request is made.
   if (
     isDefined(summaryDiff) &&
     (isCallRecordingSummaryAvailable(summaryDiff.before?.markdown) ||
@@ -69,7 +67,7 @@ export default defineLogicFunction({
     POST_CALL_RECORDING_TO_INBOX_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIER,
   name: 'post-call-recording-to-inbox',
   description:
-    'Posts a one-time message in the inbox of each workspace member of a meeting when its recording gets a summary. Does nothing while Inbox is off.',
+    'Posts a message in the inbox of each workspace member of a meeting the first time a recording of theirs gets a summary, once per member. Does nothing while Inbox is off.',
   timeoutSeconds: 60,
   handler: postCallRecordingToInboxHandler,
   databaseEventTriggerSettings: {

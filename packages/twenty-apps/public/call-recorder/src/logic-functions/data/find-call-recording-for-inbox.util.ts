@@ -1,5 +1,5 @@
-import { isNull, isUndefined } from '@sniptt/guards';
 import { type CoreApiClient } from 'twenty-client-sdk/core';
+import { isDefined } from 'twenty-sdk/utils';
 
 import { getString } from 'src/logic-functions/utils/get-string.util';
 
@@ -36,7 +36,7 @@ export const findCallRecordingForInbox = async ({
 
   const node = queryResult.callRecordings?.edges?.[0]?.node;
 
-  if (isUndefined(node) || isNull(node)) {
+  if (!isDefined(node)) {
     return undefined;
   }
 
