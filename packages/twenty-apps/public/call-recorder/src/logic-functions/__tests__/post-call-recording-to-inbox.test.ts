@@ -59,6 +59,26 @@ const buildSummaryUpdateEvent = ({
   },
 });
 
+const buildMemberVariables = ({
+  workspaceMemberId,
+  recapsValue,
+}: {
+  workspaceMemberId: string;
+  recapsValue?: string;
+}) => ({
+  userWorkspaceId: `user-workspace-of-${workspaceMemberId}`,
+  workspaceMemberId,
+  variables:
+    recapsValue === undefined
+      ? []
+      : [
+          {
+            key: 'CALL_RECORDER_MEMBER_INBOX_RECAPS_ENABLED',
+            value: recapsValue,
+          },
+        ],
+});
+
 const seedWorkspace = ({
   isInboxEnabled = true,
   recapWorkspaceMemberIds = [],
@@ -66,46 +86,34 @@ const seedWorkspace = ({
   isInboxEnabled?: boolean;
   recapWorkspaceMemberIds?: string[];
 } = {}) => {
-  metadataQueryMock.mockImplementation(async (query: object) =>
-    'currentWorkspace' in query
-      ? {
-          currentWorkspace: {
-            featureFlags: [
-              { key: 'IS_AI_CHAT_INBOX_ENABLED', value: isInboxEnabled },
-              { key: 'IS_MCP_SERVERS_ENABLED', value: true },
-            ],
-          },
-        }
-      : {
-          myUserApplicationVariables: [
-            ...recapWorkspaceMemberIds.map((workspaceMemberId) => ({
-              userWorkspaceId: `user-workspace-of-${workspaceMemberId}`,
-              workspaceMemberId,
-              variables: [
-                {
-                  key: 'CALL_RECORDER_MEMBER_INBOX_RECAPS_ENABLED',
-                  value: 'true',
-                },
-              ],
-            })),
-            {
-              userWorkspaceId: 'user-workspace-of-member-recaps-off',
-              workspaceMemberId: 'member-recaps-off',
-              variables: [
-                {
-                  key: 'CALL_RECORDER_MEMBER_INBOX_RECAPS_ENABLED',
-                  value: 'false',
-                },
-              ],
-            },
-            {
-              userWorkspaceId: 'user-workspace-of-member-nothing-saved',
-              workspaceMemberId: 'member-nothing-saved',
-              variables: [],
-            },
-          ],
-        },
-  );
+  const workspaceFeatureFlags = {
+    currentWorkspace: {
+      featureFlags: [
+        { key: 'IS_AI_CHAT_INBOX_ENABLED', value: isInboxEnabled },
+        { key: 'IS_MCP_SERVERS_ENABLED', value: true },
+      ],
+    },
+  };
+  const memberVariables = {
+    myUserApplicationVariables: [
+      ...recapWorkspaceMemberIds.map((workspaceMemberId) =>
+        buildMemberVariables({ workspaceMemberId, recapsValue: 'true' }),
+      ),
+      buildMemberVariables({
+        workspaceMemberId: 'member-recaps-off',
+        recapsValue: 'false',
+      }),
+      buildMemberVariables({ workspaceMemberId: 'member-nothing-saved' }),
+    ],
+  };
+
+  metadataQueryMock.mockImplementation(async (query: object) => {
+    if ('currentWorkspace' in query) {
+      return workspaceFeatureFlags;
+    }
+
+    return memberVariables;
+  });
 };
 
 const seedMeeting = ({
