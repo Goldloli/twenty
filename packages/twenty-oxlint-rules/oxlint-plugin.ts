@@ -57,6 +57,10 @@ import {
   RULE_NAME as noIcuEscapingApostropheName,
 } from './rules/no-icu-escaping-apostrophe';
 import {
+  rule as noFocusedTests,
+  RULE_NAME as noFocusedTestsName,
+} from './rules/no-focused-tests';
+import {
   rule as noJotaiStoreInSelector,
   RULE_NAME as noJotaiStoreInSelectorName,
 } from './rules/no-jotai-store-in-selector';
@@ -140,6 +144,7 @@ export default definePlugin({
     [noDirectAtomFamilyInSelectorName]: noDirectAtomFamilyInSelector,
     [noHardcodedColorsName]: noHardcodedColors,
     [noIcuEscapingApostropheName]: noIcuEscapingApostrophe,
+    [noFocusedTestsName]: noFocusedTests,
     [noJotaiStoreInSelectorName]: noJotaiStoreInSelector,
     [noMiscasedAcronymInIdentifierName]: noMiscasedAcronymInIdentifier,
     [noMiscasedAcronymInMessageName]: noMiscasedAcronymInMessage,
